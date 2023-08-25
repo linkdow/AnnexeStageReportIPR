@@ -7,7 +7,7 @@ Annexes pour mon rapport de stage :
 - inference_template.ipynb
 
   
-  Exemple de code pour inférer avec le modèle entraîner dans Classification_chantiers_DataGen.ipynb
+  Exemple de code pour inférer avec le modèle entraîné dans Classification_chantiers_DataGen.ipynb
 - Distance_test.ipynb
 
   
