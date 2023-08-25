@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Install LSKN</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h2 id="user-guide-for-large-selective-kernel-network">User guide for Large-Selective-Kernel-Network</h2>
+<h3 id="installation">Installation</h3>
+<pre class=" language-bash"><code class="prism  language-bash">conda create -n LSKN python<span class="token operator">=</span>3.8 -y
+conda activate LSKN
+conda <span class="token function">install</span> pytorch<span class="token operator">==</span>1.8.0 torchvision<span class="token operator">==</span>0.9.0 cudatoolkit<span class="token operator">=</span>10.2 -c pytorch -y
+pip <span class="token function">install</span> -U openmim
+mim <span class="token function">install</span> mmcv
+mim <span class="token function">install</span> mmcv-full
+mim <span class="token function">install</span> mmdet
+<span class="token comment"># For using notebooks through VSCode</span>
+conda <span class="token function">install</span> ipykernel -y
+
+<span class="token function">git</span> clone https://github.com/zcablii/Large-Selective-Kernel-Network.git
+<span class="token function">cd</span> Large-Selective-Kernel-Network
+pip <span class="token function">install</span> -v -e <span class="token keyword">.</span>
+<span class="token comment"># Needs to be reinstalled in order to work</span>
+pip <span class="token function">install</span> pillow<span class="token operator">==</span>9.0.0
+pip <span class="token function">install</span> timm
+</code></pre>
+<h3 id="download-pretrained-model-and-config-from-lskn-github">Download pretrained model and config from <a href="https://github.com/zcablii/Large-Selective-Kernel-Network">LSKN github</a></h3>
+<p>For the detection on barges I took the <strong>LSKNet_S*</strong> model.<br>
+Use inference_bateau_propre.ipynb if you want to replicate the results for the ships in Ile de France.<br>
+In order to isolate barge, I kept results with a score &gt; 0.4 and width &gt; 9</p>
+<p>Or you can use other options in the demo folder.</p>
+</div>
+</body>
+
+</html>

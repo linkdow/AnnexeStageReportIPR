@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>explicationPiscine</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="comment-utiliser-yolov6">Comment utiliser YOLOv6</h1>
+<h1 id="installation">Installation</h1>
+<p>Le plus simple est de faire un nouvel environnement <a href="https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">Conda</a>.</p>
+<pre class=" language-bash"><code class="prism  language-bash">conda create --prefix H:/Anaconda/Yolo python<span class="token operator">=</span>3.8
+conda activate H:/Anaconda/Yolo
+conda <span class="token function">install</span> <span class="token function">git</span>
+</code></pre>
+<p>Ensuite à l’endroit de votre choix :</p>
+<pre class=" language-bash"><code class="prism  language-bash"><span class="token function">git</span> clone https://github.com/meituan/YOLOv6
+<span class="token function">cd</span> YOLOv6
+pip <span class="token function">install</span> -r requirements.txt
+</code></pre>
+<p>Pour les piscines j’ai utilisé ce <a href="https://www.kaggle.com/datasets/alexj21/swimming-pool-512x512">dataset</a> et j’avais déjà converti auparavant les annotations au format csv.<br>
+Dans le <a href="https://www.kaggle.com/datasets/alexj21/swimming-pool-512x512">dataset</a> que j’ai pris il y environ 2400 images dont seulement la moitié avec des piscines dessus. Dans la documentation YOLO il est recommandé d’avoir entre 0-10% d’images “background” (sans éléments à reconnaître dessus). Donc j’ai pris 100 images background pour un peu plus de 1200 images labellisées.</p>
+<h1 id="entraînement">Entraînement</h1>
+<h2 id="préparation-des-données">Préparation des données</h2>
+<p>Les plus simple est de suivre l’explication de la documentation <a href="https://github.com/meituan/YOLOv6/blob/main/docs/Train_custom_data.md">Yolov6</a>.<br>
+Dans le cas ou les labels sont dans un csv voici un code exemple pour formater les annotations au bon format :</p>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token comment"># Pour importer les données</span>
+df <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span><span class="token string">"swimming_pools_labels_512x512.csv"</span><span class="token punctuation">)</span>
+<span class="token comment"># Calcul des valeurs</span>
+col <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">"image_id"</span><span class="token punctuation">,</span><span class="token string">"class_id"</span><span class="token punctuation">,</span><span class="token string">"center_x"</span><span class="token punctuation">,</span><span class="token string">"center_y"</span><span class="token punctuation">,</span><span class="token string">"bbox_width"</span><span class="token punctuation">,</span><span class="token string">"bbox_height"</span><span class="token punctuation">]</span>
+df<span class="token punctuation">[</span><span class="token string">"bbox_width"</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'xmax'</span><span class="token punctuation">]</span> <span class="token operator">-</span> df<span class="token punctuation">[</span><span class="token string">'xmin'</span><span class="token punctuation">]</span>
+df<span class="token punctuation">[</span><span class="token string">'bbox_height'</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'ymax'</span><span class="token punctuation">]</span> <span class="token operator">-</span> df<span class="token punctuation">[</span><span class="token string">'ymin'</span><span class="token punctuation">]</span>
+df<span class="token punctuation">[</span><span class="token string">'center_x'</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'xmin'</span><span class="token punctuation">]</span> <span class="token operator">+</span> df<span class="token punctuation">[</span><span class="token string">'bbox_width'</span><span class="token punctuation">]</span> <span class="token operator">/</span> <span class="token number">2</span>
+df<span class="token punctuation">[</span><span class="token string">'center_y'</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'ymin'</span><span class="token punctuation">]</span> <span class="token operator">+</span> df<span class="token punctuation">[</span><span class="token string">'bbox_height'</span><span class="token punctuation">]</span> <span class="token operator">/</span> <span class="token number">2</span>
+df<span class="token punctuation">.</span>drop<span class="token punctuation">(</span>columns<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">"image_path"</span><span class="token punctuation">,</span><span class="token string">"bbox_area"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>inplace<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+df<span class="token punctuation">[</span><span class="token string">"class_id"</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span>
+size_img <span class="token operator">=</span> <span class="token number">512</span>
+df<span class="token punctuation">[</span><span class="token string">"bbox_width"</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">"bbox_width"</span><span class="token punctuation">]</span> <span class="token operator">/</span> size_img
+df<span class="token punctuation">[</span><span class="token string">'bbox_height'</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'bbox_height'</span><span class="token punctuation">]</span> <span class="token operator">/</span> size_img
+df<span class="token punctuation">[</span><span class="token string">'center_x'</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'center_x'</span><span class="token punctuation">]</span> <span class="token operator">/</span> size_img
+df<span class="token punctuation">[</span><span class="token string">'center_y'</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">'center_y'</span><span class="token punctuation">]</span> <span class="token operator">/</span> size_img
+
+<span class="token comment"># Sauvegarde au bon format</span>
+<span class="token keyword">import</span>  shutil
+<span class="token comment"># specify the source and destination directories</span>
+src_dir <span class="token operator">=</span> r<span class="token string">'H:\Datasets\dataset_piscines\CANNES_TILES_512x512_PNG\CANNES_TILES_512x512_PNG'</span>
+dst_dir <span class="token operator">=</span> r<span class="token string">'H:\Datasets\dataset_piscines\yolo_pool\images\train'</span>
+label_path <span class="token operator">=</span> <span class="token string">"H:/Datasets/dataset_piscines/yolo_pool/labels/train/"</span>
+<span class="token keyword">for</span>  i  <span class="token keyword">in</span>  <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">856</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+	<span class="token comment">## Copy images</span>
+	<span class="token comment"># specify the file name to be copied</span>
+	file_name <span class="token operator">=</span> names<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+	<span class="token comment"># use shutil.copy() to copy the file from source to destination</span>
+	shutil<span class="token punctuation">.</span>copy<span class="token punctuation">(</span>src_dir <span class="token operator">+</span> <span class="token string">'/'</span> <span class="token operator">+</span> file_name<span class="token operator">+</span><span class="token string">".png"</span><span class="token punctuation">,</span> dst_dir <span class="token operator">+</span> <span class="token string">'/'</span> <span class="token operator">+</span> file_name <span class="token operator">+</span> <span class="token string">".png"</span><span class="token punctuation">)</span>
+	<span class="token comment">## Create label for image</span>
+	<span class="token keyword">with</span>  <span class="token builtin">open</span><span class="token punctuation">(</span>label_path<span class="token operator">+</span>file_name<span class="token operator">+</span><span class="token string">".txt"</span><span class="token punctuation">,</span> <span class="token string">'w'</span><span class="token punctuation">)</span> <span class="token keyword">as</span>  <span class="token builtin">file</span><span class="token punctuation">:</span>
+		<span class="token comment"># write some text to the file</span>
+		rows <span class="token operator">=</span> df<span class="token punctuation">[</span>df<span class="token punctuation">[</span><span class="token string">"image_id"</span><span class="token punctuation">]</span> <span class="token operator">==</span> names<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">]</span>
+		yolo_string <span class="token operator">=</span> rows<span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token string">"class_id"</span><span class="token punctuation">,</span><span class="token string">"center_x"</span><span class="token punctuation">,</span><span class="token string">"center_y"</span><span class="token punctuation">,</span><span class="token string">"bbox_width"</span><span class="token punctuation">,</span><span class="token string">"bbox_height"</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>to_string<span class="token punctuation">(</span>header<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">,</span>index<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+		<span class="token builtin">file</span><span class="token punctuation">.</span>write<span class="token punctuation">(</span>yolo_string<span class="token punctuation">)</span>
+		<span class="token keyword">if</span>  i<span class="token operator">%</span><span class="token number">100</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">:</span>
+			<span class="token keyword">print</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span>
+</code></pre>
+<h2 id="lancement-de-lentraînement">Lancement de l’entraînement</h2>
+<p>Une fois le tutoriel suivi, on peut lancer le training avec la commande suivante :<br>
+Si possible essayer de maximiser le batch size.</p>
+<pre class=" language-bash"><code class="prism  language-bash">python tools/train.py --batch 16 --conf configs/yolov6s_finetune.py --data data/dataset.yaml --fuse_ab --device 0 --img-size 512
+</code></pre>
+<h1 id="inférence">Inférence</h1>
+<p>Pour tester l’inférence sur une ou deux images, il est préférable d’utiliser le notebook <em><strong>inference.ipynb</strong></em> dans le répertoire YOLOv6. En pensant à changer le path des images et du model.</p>
+<h2 id="par-batch">Par batch</h2>
+<p>Sous windows seulement, il y a un problème avec le calcul du chemin relatif dans pour trouver les images pour l’inférence.<br>
+Dans le cas où une erreur ressemblerait à ça <strong>ValueError: path is on drive C:, start on drive d:</strong> lors du lancement de l’inférence voici un fix :<br>
+Dans <a href="http://inferer.py">inferer.py</a> se trouvant ici : <strong>/YOLOv6/yolov6/core/inferer.py</strong> enlever toutes les mentions de la variable <em><strong>rel_path</strong></em> se trouvant à partir de la ligne 86.<br>
+Le nouveau code devrait ressembler à ça :</p>
+<pre class=" language-python"><code class="prism  language-python">save_path <span class="token operator">=</span> osp<span class="token punctuation">.</span>join<span class="token punctuation">(</span>save_dir<span class="token punctuation">,</span> osp<span class="token punctuation">.</span>basename<span class="token punctuation">(</span>img_path<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment"># im.jpg</span>
+txt_path <span class="token operator">=</span> osp<span class="token punctuation">.</span>join<span class="token punctuation">(</span>save_dir<span class="token punctuation">,</span> <span class="token string">'labels'</span><span class="token punctuation">,</span> osp<span class="token punctuation">.</span>splitext<span class="token punctuation">(</span>osp<span class="token punctuation">.</span>basename<span class="token punctuation">(</span>img_path<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>txt_path<span class="token punctuation">)</span>
+os<span class="token punctuation">.</span>makedirs<span class="token punctuation">(</span>osp<span class="token punctuation">.</span>join<span class="token punctuation">(</span>save_dir<span class="token punctuation">)</span><span class="token punctuation">,</span> exist_ok<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+</code></pre>
+<h2 id="lancement-de-linférence">Lancement de l’inférence</h2>
+<pre class=" language-bash"><code class="prism  language-bash">python tools/infer.py --weights output_dir/name/weights/best_ckpt_pool.pt --yaml data/dataset.yaml --source data/images/ --device 0 --save-txt --not-save-img
+</code></pre>
+<p>Les labels prédit sont enregistré dans le chemin suivant : <strong>\YOLOv6\runs\inference\exp\labels</strong></p>
+<p>Voici un exemple de code pour transformer les labels au format csv :</p>
+<pre class=" language-python"><code class="prism  language-python"><span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token keyword">import</span> os
+data <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+
+image_size <span class="token operator">=</span> <span class="token number">512</span>
+
+<span class="token comment"># Loop through all text files in the 'labels' folder</span>
+<span class="token keyword">for</span>  filename  <span class="token keyword">in</span>  os<span class="token punctuation">.</span>listdir<span class="token punctuation">(</span><span class="token string">'labels'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+	<span class="token keyword">if</span>  filename<span class="token punctuation">.</span>endswith<span class="token punctuation">(</span><span class="token string">'.txt'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+		<span class="token comment"># Extract the image ID from the filename</span>
+		img_id <span class="token operator">=</span> filename<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+		<span class="token comment"># Read the label information from the text file</span>
+		<span class="token keyword">with</span>  <span class="token builtin">open</span><span class="token punctuation">(</span>os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>join<span class="token punctuation">(</span><span class="token string">'labels'</span><span class="token punctuation">,</span> filename<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'r'</span><span class="token punctuation">)</span> <span class="token keyword">as</span>  f<span class="token punctuation">:</span>
+			<span class="token keyword">for</span>  line  <span class="token keyword">in</span>  f<span class="token punctuation">:</span>
+				<span class="token comment"># Parse the label information</span>
+				class_id<span class="token punctuation">,</span> center_x<span class="token punctuation">,</span> center_y<span class="token punctuation">,</span> bbox_width<span class="token punctuation">,</span> bbox_height<span class="token punctuation">,</span> confidence <span class="token operator">=</span> line<span class="token punctuation">.</span>strip<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">' '</span><span class="token punctuation">)</span>
+				<span class="token comment"># Calculate the coordinates of the bounding box</span>
+				xmin <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token builtin">float</span><span class="token punctuation">(</span>center_x<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token builtin">float</span><span class="token punctuation">(</span>bbox_width<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> image_size
+				ymin <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token builtin">float</span><span class="token punctuation">(</span>center_y<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token builtin">float</span><span class="token punctuation">(</span>bbox_height<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> image_size
+				xmax <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token builtin">float</span><span class="token punctuation">(</span>center_x<span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token builtin">float</span><span class="token punctuation">(</span>bbox_width<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> image_size
+				ymax <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token builtin">float</span><span class="token punctuation">(</span>center_y<span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token builtin">float</span><span class="token punctuation">(</span>bbox_height<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> image_size
+				<span class="token comment"># Append the label information to the list</span>
+				data<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token punctuation">[</span>img_id<span class="token punctuation">,</span> xmin<span class="token punctuation">,</span> ymin<span class="token punctuation">,</span> xmax<span class="token punctuation">,</span> ymax<span class="token punctuation">,</span> confidence<span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token comment"># Create a Pandas DataFrame from the list of label information</span>
+df <span class="token operator">=</span> pd<span class="token punctuation">.</span>DataFrame<span class="token punctuation">(</span>data<span class="token punctuation">,</span> columns<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">'Id'</span><span class="token punctuation">,</span> <span class="token string">'xmin'</span><span class="token punctuation">,</span> <span class="token string">'ymin'</span><span class="token punctuation">,</span> <span class="token string">'xmax'</span><span class="token punctuation">,</span> <span class="token string">'ymax'</span><span class="token punctuation">,</span> <span class="token string">'confidence'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+df<span class="token punctuation">.</span>to_csv<span class="token punctuation">(</span><span class="token string">"labels.csv"</span><span class="token punctuation">,</span>index<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+</code></pre>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>explicationOpenCD</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="change-detection-using-open-cd">Change detection using Open-CD</h1>
+<h2 id="install">Install</h2>
+<p>Download Open-cd official repository.</p>
+<pre class=" language-bash"><code class="prism  language-bash"><span class="token function">git</span> clone https://github.com/likyoo/open-cd
+</code></pre>
+<p>Create Anaconda environnement</p>
+<pre class=" language-bash"><code class="prism  language-bash">conda <span class="token function">env</span> create -f environment.yml
+</code></pre>
+<p>Download <a href="https://drive.google.com/file/d/128FVQL-93oN5lUMGuqDcmPU-80RiXBhn/view">Weights Changer</a> if you want to use the changer model (same model that I used)<br>
+Then in the open-cd folder you just created :</p>
+<pre class=" language-bash"><code class="prism  language-bash"><span class="token function">mkdir</span> changer_ckpt
+</code></pre>
+<p>And put the weights of the model you just downloaded in this folder</p>
+<h2 id="usage">Usage</h2>
+<h3 id="in-order-to-run-the-inference-">In order to run the inference :</h3>
+<ol>
+<li>Setting up the dataset (images names must be the same between each folder)</li>
+</ol>
+<pre><code>test/
+......A/
+.........image_1.png
+.........image_2.png
+......B/
+.........image_1.png
+.........image_2.png
+......label/
+.........image_1.png
+.........image_2.png
+</code></pre>
+<p>Note : If you don’t have label image for your dataset a temporary fix is to copy a black/empty image instead with the correct filename.</p>
+<ol start="2">
+<li>You need to change the path to your data in</li>
+</ol>
+<pre><code>openlab\open-cd\configs\common\standard_256x256_40k_levircd.py
+</code></pre>
+<ol start="3">
+<li>When everything is in place :</li>
+</ol>
+<pre class=" language-bash"><code class="prism  language-bash">conda activate opencd
+<span class="token function">cd</span> Path/to/where/you/cloned/the/repo
+<span class="token function">mkdir</span> temp_infer
+<span class="token comment"># It's where the mask results will be stored</span>
+python tools/test.py configs/changer/changer_ex_s101_512x512_40k_levircd.py  changer_ckpt/ChangerEx_s101-512x512_40k_levircd_20220710-082722.pth --show-dir temp_infer
+</code></pre>
+<h2 id="tools">Tools</h2>
+<p>Furthermore,  there is a notebook template named <em>cut1021.ipynb</em> for extracting images from a raster in order to create your own dataset.</p>
+<p>Also, for some reasons the default test script is trying to load the training dataset, in order to tackle this, a temporary fix is to copy the train folder provided next to the test folder. This contains 3 images just to pass this step in the test script.</p>
+</div>
+</body>
+
+</html>
